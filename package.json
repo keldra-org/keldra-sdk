@@ -1,6 +1,6 @@
 {
   "name": "@keldra/sdk",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "TypeScript SDK for Keldra relay API",
   "license": "MIT",
   "author": "Keldra",

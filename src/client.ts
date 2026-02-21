@@ -71,6 +71,22 @@ export class KeldraClient {
     return new KeldraClient({ apiKey });
   }
 
+  static async createSecure(
+    apiKey: string,
+    options?: Omit<KeldraClientConfig, 'apiKey' | 'encryptFn' | 'noisePublicKey' | 'noiseKid'> & {
+      encryptFn?: EncryptFn;
+    },
+  ): Promise<KeldraClient> {
+    const encryptFn = options?.encryptFn ?? (await KeldraClient.resolveEncryptFn());
+    const client = new KeldraClient({
+      ...options,
+      apiKey,
+      encryptFn,
+    });
+    await client.fetchNoiseKey();
+    return client;
+  }
+
   static fromEnv(
     env: EnvMap = ((globalThis as { process?: { env?: EnvMap } }).process?.env ??
       {}) as EnvMap,
@@ -95,6 +111,30 @@ export class KeldraClient {
     return new KeldraClient({
       apiKey,
       gatewayUrl: env[gatewayUrlName] ?? DEFAULT_GATEWAY_URL,
+    });
+  }
+
+  static async fromEnvSecure(
+    env: EnvMap = ((globalThis as { process?: { env?: EnvMap } }).process?.env ??
+      {}) as EnvMap,
+    options?: {
+      apiKeyEnv?: string;
+      gatewayUrlEnv?: string;
+      encryptFn?: EncryptFn;
+    },
+  ): Promise<KeldraClient> {
+    const apiKeyName = options?.apiKeyEnv ?? DEFAULT_API_KEY_ENV;
+    const gatewayUrlName = options?.gatewayUrlEnv ?? DEFAULT_GATEWAY_ENV;
+    const apiKey = env[apiKeyName];
+    const gatewayUrl = env[gatewayUrlName] ?? DEFAULT_GATEWAY_URL;
+
+    if (!apiKey) {
+      throw KeldraError.config(`${apiKeyName} is required`);
+    }
+
+    return KeldraClient.createSecure(apiKey, {
+      gatewayUrl,
+      encryptFn: options?.encryptFn,
     });
   }
 
@@ -196,6 +236,17 @@ export class KeldraClient {
 
   get encrypted(): boolean {
     return !!(this.noisePublicKey && this.noiseKid && this.encryptFn);
+  }
+
+  private static async resolveEncryptFn(): Promise<EncryptFn> {
+    try {
+      const mod = await import('./crypto/index.js');
+      return mod.createEncryptFn();
+    } catch {
+      throw KeldraError.config(
+        'Encryption helpers are not installed. Install @stablelib/x25519 @stablelib/chacha20poly1305 @stablelib/blake2s or provide encryptFn manually.',
+      );
+    }
   }
 }
 

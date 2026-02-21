@@ -31,15 +31,10 @@ npm install @keldra/sdk viem
 
 ```ts
 import { KeldraClient } from "@keldra/sdk";
-import { createEncryptFn } from "@keldra/sdk/crypto";
-
-const client = KeldraClient.builder()
-  .apiKey(process.env.KELDRA_API_KEY!)
-  .gatewayUrl(process.env.KELDRA_GATEWAY_URL ?? "https://keldra.network")
-  .withEncryption(createEncryptFn())
-  .build();
-
-await client.fetchNoiseKey();
+const client = await KeldraClient.createSecure(
+  process.env.KELDRA_API_KEY!,
+  { gatewayUrl: process.env.KELDRA_GATEWAY_URL ?? "https://keldra.network" },
+);
 const result = await client.relay("ethereum", signedTxHex);
 const limits = await client.limits();
 const usage = await client.usage("2026-02-01", "2026-02-20");
@@ -62,7 +57,7 @@ Then initialize directly:
 ```ts
 import { KeldraClient } from "@keldra/sdk";
 
-const client = KeldraClient.fromEnv();
+const client = await KeldraClient.fromEnvSecure();
 ```
 
 ## Backend Proxy Example (Next.js)
@@ -73,13 +68,10 @@ Keep Keldra calls on your server route:
 // app/api/relay/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { KeldraClient } from "@keldra/sdk";
-import { createEncryptFn } from "@keldra/sdk/crypto";
-
-const client = KeldraClient.builder()
-  .apiKey(process.env.KELDRA_API_KEY!)
-  .gatewayUrl(process.env.KELDRA_GATEWAY_URL ?? "https://keldra.network")
-  .withEncryption(createEncryptFn())
-  .build();
+const client = await KeldraClient.createSecure(
+  process.env.KELDRA_API_KEY!,
+  { gatewayUrl: process.env.KELDRA_GATEWAY_URL ?? "https://keldra.network" },
+);
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -89,7 +81,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "chain and signedTx are required" }, { status: 400 });
   }
 
-  await client.fetchNoiseKey();
   const relay = await client.relay(chain, signedTx);
   return NextResponse.json(relay);
 }
@@ -119,7 +110,9 @@ const relay = await client.submit("ethereum", signedTxHex);
 import { KeldraClient } from "@keldra/sdk";
 import { wrapSigner } from "@keldra/sdk/ethers";
 
-const client = KeldraClient.create("kk_your_api_key");
+const client = await KeldraClient.createSecure("kk_your_api_key", {
+  gatewayUrl: "https://keldra.network",
+});
 const signer = wrapSigner(originalSigner, { client, chain: "ethereum" });
 
 const tx = await signer.sendTransaction({ to, value });
@@ -132,7 +125,9 @@ console.log(tx.hash);
 import { KeldraClient } from "@keldra/sdk";
 import { wrapWalletClient } from "@keldra/sdk/viem";
 
-const client = KeldraClient.create("kk_your_api_key");
+const client = await KeldraClient.createSecure("kk_your_api_key", {
+  gatewayUrl: "https://keldra.network",
+});
 const walletClient = wrapWalletClient(originalWalletClient, { client, chain: "ethereum" });
 
 const relayId = await walletClient.sendTransaction({ to, value });

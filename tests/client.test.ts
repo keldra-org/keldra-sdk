@@ -36,6 +36,20 @@ describe('KeldraClient.create', () => {
   });
 });
 
+describe('KeldraClient.createSecure', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('fetches noise key and returns encrypted client', async () => {
+    mockFetch([{ body: { kid: 'k1', public_key: 'aabbccdd' } }]);
+
+    const client = await KeldraClient.createSecure('kk_test', {
+      encryptFn: async (payload) => payload,
+    });
+
+    expect(client.encrypted).toBe(true);
+  });
+});
+
 describe('KeldraClient.submit', () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -50,7 +64,11 @@ describe('KeldraClient.submit', () => {
       },
     ]);
 
-    const client = KeldraClient.create('kk_test');
+    const client = KeldraClient.builder()
+      .apiKey('kk_test')
+      .noisePublicKey('aabbccdd', 'kid1')
+      .withEncryption(async (payload) => payload)
+      .build();
     const resp = await client.submit('ethereum', '0xdeadbeef');
 
     expect(resp.relay_id).toBe('test-uuid');
@@ -65,21 +83,27 @@ describe('KeldraClient.submit', () => {
 
     const body = JSON.parse(init?.body as string);
     expect(body.chain).toBe('ethereum');
-    expect(body.signed_tx).toMatch(/^0x/);
+    expect(body.signed_tx).toBe('');
+    expect(body.noise_kid).toBe('kid1');
+    expect(typeof body.encrypted_payload).toBe('string');
     expect(body.options.delay_profile).toBe('balanced');
   });
 
   it('pads the transaction', async () => {
     mockFetch([{ body: { relay_id: 'x', estimated_broadcast_min_secs: 0, estimated_broadcast_max_secs: 0 } }]);
 
-    const client = KeldraClient.create('kk_test');
+    const client = KeldraClient.builder()
+      .apiKey('kk_test')
+      .noisePublicKey('aabbccdd', 'kid1')
+      .withEncryption(async (payload) => payload)
+      .build();
     await client.submit('ethereum', '0xab');
 
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
     );
-    // 1 byte tx → padded to 512 bytes → 1024 hex chars + "0x"
-    expect(body.signed_tx.length).toBe(2 + 512 * 2);
+    // 1 byte tx -> padded to 512 bytes -> base64 length 684
+    expect(body.encrypted_payload.length).toBe(684);
   });
 });
 
