@@ -14,20 +14,6 @@ export interface KeldraViemOptions {
   chain: Chain;
 }
 
-/**
- * Wrap a viem WalletClient so sendTransaction routes through Keldra.
- *
- * Usage:
- * ```ts
- * import { KeldraClient } from '@keldra/sdk';
- * import { wrapWalletClient } from '@keldra/sdk/viem';
- *
- * const client = KeldraClient.create('kk_live_abc123');
- * const wrapped = wrapWalletClient(walletClient, { client, chain: 'ethereum' });
- * const hash = await wrapped.sendTransaction({ to, value });
- * // hash is the Keldra relay_id
- * ```
- */
 export function wrapWalletClient<
   TTransport extends Transport = Transport,
   TChain extends ViemChain | undefined = ViemChain | undefined,
@@ -41,13 +27,11 @@ export function wrapWalletClient<
     sendTransaction: (async (
       args: SendTransactionParameters<TChain, TAccount>,
     ): Promise<SendTransactionReturnType> => {
-      // Prepare and sign the transaction without sending
       const request = await walletClient.prepareTransactionRequest(
         args as never,
       );
       const signedTx = await walletClient.signTransaction(request as never);
 
-      // Route through Keldra
       const response = await options.client.submit(
         options.chain,
         signedTx as string,
@@ -57,9 +41,6 @@ export function wrapWalletClient<
   } as WalletClient<TTransport, TChain, TAccount>;
 }
 
-/**
- * Create a custom action for viem transports that relays through Keldra.
- */
 export function keldraTransportAction(options: KeldraViemOptions) {
   return {
     async sendRawTransaction({

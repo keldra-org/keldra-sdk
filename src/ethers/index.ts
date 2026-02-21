@@ -8,20 +8,6 @@ export interface KeldraBroadcasterOptions {
   waitForConfirmation?: boolean;
 }
 
-/**
- * Wrap an ethers.js v6 Signer so that sendTransaction routes through Keldra.
- *
- * Usage:
- * ```ts
- * import { KeldraClient } from '@keldra/sdk';
- * import { wrapSigner } from '@keldra/sdk/ethers';
- *
- * const client = KeldraClient.create('kk_live_abc123');
- * const wrapped = wrapSigner(signer, { client, chain: 'ethereum' });
- * const tx = await wrapped.sendTransaction({ to, value });
- * // tx.hash is the Keldra relay_id
- * ```
- */
 export function wrapSigner(
   signer: Signer,
   options: KeldraBroadcasterOptions,
@@ -30,11 +16,9 @@ export function wrapSigner(
     get(target, prop, receiver) {
       if (prop === 'sendTransaction') {
         return async (tx: TransactionRequest) => {
-          // Sign the transaction without broadcasting
           const populated = await target.populateTransaction(tx);
           const signedTx = await target.signTransaction(populated);
 
-          // Submit through Keldra
           const relayResponse = await options.client.submit(
             options.chain,
             signedTx,
@@ -61,9 +45,6 @@ export function wrapSigner(
   });
 }
 
-/**
- * Lower-level broadcaster for direct use.
- */
 export class KeldraBroadcaster {
   constructor(
     private readonly client: KeldraClient,

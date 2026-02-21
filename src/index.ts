@@ -11,6 +11,8 @@ export type {
   HealthResponse,
   HealthStats,
   KeldraClientConfig,
+  MeLimitsResponse,
+  MeUsageResponse,
   NoiseKeyResponse,
   RelayOptions,
   RelayRequest,
@@ -18,5 +20,7 @@ export type {
   RelayResult,
   RelayStatus,
   RelayStatusResponse,
+  UsageDailyRow,
+  UsageTotals,
 } from './types.js';
 export { TERMINAL_STATUSES } from './types.js';

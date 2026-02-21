@@ -1,30 +1,76 @@
 {
   "name": "@keldra/sdk",
-  "version": "0.1.0",
-  "description": "TypeScript SDK for the Keldra privacy broadcast relay",
+  "version": "0.1.2",
+  "description": "TypeScript SDK for Keldra relay API",
+  "license": "MIT",
+  "author": "Keldra",
+  "homepage": "https://keldra.network",
+  "keywords": [
+    "keldra",
+    "relay",
+    "typescript",
+    "sdk",
+    "ethereum",
+    "api"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
-      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./crypto": {
-      "import": { "types": "./dist/crypto/index.d.ts", "default": "./dist/crypto/index.js" },
-      "require": { "types": "./dist/crypto/index.d.cts", "default": "./dist/crypto/index.cjs" }
+      "import": {
+        "types": "./dist/crypto/index.d.ts",
+        "default": "./dist/crypto/index.js"
+      },
+      "require": {
+        "types": "./dist/crypto/index.d.cts",
+        "default": "./dist/crypto/index.cjs"
+      }
     },
     "./ethers": {
-      "import": { "types": "./dist/ethers/index.d.ts", "default": "./dist/ethers/index.js" },
-      "require": { "types": "./dist/ethers/index.d.cts", "default": "./dist/ethers/index.cjs" }
+      "import": {
+        "types": "./dist/ethers/index.d.ts",
+        "default": "./dist/ethers/index.js"
+      },
+      "require": {
+        "types": "./dist/ethers/index.d.cts",
+        "default": "./dist/ethers/index.cjs"
+      }
     },
     "./viem": {
-      "import": { "types": "./dist/viem/index.d.ts", "default": "./dist/viem/index.js" },
-      "require": { "types": "./dist/viem/index.d.cts", "default": "./dist/viem/index.cjs" }
+      "import": {
+        "types": "./dist/viem/index.d.ts",
+        "default": "./dist/viem/index.js"
+      },
+      "require": {
+        "types": "./dist/viem/index.d.cts",
+        "default": "./dist/viem/index.cjs"
+      }
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
@@ -40,11 +86,21 @@
     "viem": "^2.0.0"
   },
   "peerDependenciesMeta": {
-    "@stablelib/blake2s": { "optional": true },
-    "@stablelib/chacha20poly1305": { "optional": true },
-    "@stablelib/x25519": { "optional": true },
-    "ethers": { "optional": true },
-    "viem": { "optional": true }
+    "@stablelib/blake2s": {
+      "optional": true
+    },
+    "@stablelib/chacha20poly1305": {
+      "optional": true
+    },
+    "@stablelib/x25519": {
+      "optional": true
+    },
+    "ethers": {
+      "optional": true
+    },
+    "viem": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@stablelib/blake2s": "^2.0.0",

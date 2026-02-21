@@ -1,10 +1,7 @@
-// Chain names (matches Rust Chain enum serde rename_all = "snake_case")
 export type Chain = 'ethereum' | 'arbitrum' | 'optimism' | 'base' | 'polygon';
 
-// Delay profiles (matches Rust DelayProfile serde rename_all = "snake_case")
 export type DelayProfile = 'fast' | 'balanced' | 'maximum_privacy';
 
-// Relay statuses (matches Rust RelayStatus serde rename_all = "snake_case")
 export type RelayStatus = 'queued' | 'batched' | 'injected' | 'confirmed' | 'failed';
 
 export const TERMINAL_STATUSES: ReadonlySet<RelayStatus> = new Set([
@@ -12,7 +9,6 @@ export const TERMINAL_STATUSES: ReadonlySet<RelayStatus> = new Set([
   'failed',
 ]);
 
-// POST /v1/relay request body
 export interface RelayRequest {
   chain: Chain;
   signed_tx: string;
@@ -25,14 +21,12 @@ export interface RelayOptions {
   delay_profile: DelayProfile;
 }
 
-// POST /v1/relay response
 export interface RelayResponse {
   relay_id: string;
   estimated_broadcast_min_secs: number;
   estimated_broadcast_max_secs: number;
 }
 
-// GET /v1/relay/:id/status response
 export interface RelayStatusResponse {
   relay_id: string;
   status: RelayStatus;
@@ -44,7 +38,6 @@ export interface RelayStatusResponse {
   error?: string;
 }
 
-// SDK-level result (mirrors Rust RelayResult)
 export interface RelayResult {
   relayId: string;
   status: RelayStatus;
@@ -53,7 +46,6 @@ export interface RelayResult {
   error?: string;
 }
 
-// GET /v1/health response
 export interface HealthResponse {
   status: string;
   gateway_regions: string[];
@@ -72,7 +64,6 @@ export interface HealthStats {
   failed: number;
 }
 
-// GET /v1/chains response
 export interface ChainsResponse {
   chains: ChainConfig[];
 }
@@ -87,20 +78,62 @@ export interface ChainConfig {
   enabled: boolean;
 }
 
-// GET /v1/noise-key response
 export interface NoiseKeyResponse {
   kid: string;
   public_key: string;
   protocol: string;
 }
 
-// Encryption function signature for optional injection
+export interface MeLimitsResponse {
+  api_key: string;
+  key_id: string;
+  tier: string;
+  limits: EffectiveLimits;
+  usage: CurrentUsage;
+}
+
+export interface EffectiveLimits {
+  requests_per_minute: number;
+  max_inflight: number;
+  monthly_quota_relays: number;
+  min_poll_interval_ms: number;
+  max_body_bytes: number;
+}
+
+export interface CurrentUsage {
+  month: string;
+  monthly_relays_submitted: number;
+  monthly_remaining_relays: number;
+  inflight_relays: number;
+}
+
+export interface MeUsageResponse {
+  daily: UsageDailyRow[];
+  totals: UsageTotals;
+}
+
+export interface UsageDailyRow {
+  day: string;
+  api_key: string;
+  tier: string;
+  relays_submitted: number;
+  relays_confirmed: number;
+  relays_failed: number;
+  bytes_ingested: number;
+}
+
+export interface UsageTotals {
+  relays_submitted: number;
+  relays_confirmed: number;
+  relays_failed: number;
+  bytes_ingested: number;
+}
+
 export type EncryptFn = (
   plaintext: Uint8Array,
   gatewayPublicKeyHex: string,
 ) => Promise<Uint8Array>;
 
-// Client configuration
 export interface KeldraClientConfig {
   apiKey: string;
   gatewayUrl?: string;

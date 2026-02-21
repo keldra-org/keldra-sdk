@@ -8,6 +8,8 @@ import type {
   EncryptFn,
   HealthResponse,
   KeldraClientConfig,
+  MeLimitsResponse,
+  MeUsageResponse,
   NoiseKeyResponse,
   RelayRequest,
   RelayResponse,
@@ -18,9 +20,20 @@ import { TERMINAL_STATUSES } from './types.js';
 import { parseHex, sleep, toBase64, toHex } from './utils.js';
 
 const DEFAULT_GATEWAY_URL = 'http://localhost:3400';
-const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
-const DEFAULT_POLL_INTERVAL_MS = 2_000; // 2 seconds
-const MAX_POLL_INTERVAL_MS = 15_000; // 15 second cap
+const DEFAULT_TIMEOUT_MS = 300_000;
+const DEFAULT_POLL_INTERVAL_MS = 2_000;
+const MAX_POLL_INTERVAL_MS = 15_000;
+const DEFAULT_API_KEY_ENV = 'KELDRA_API_KEY';
+const DEFAULT_GATEWAY_ENV = 'KELDRA_GATEWAY_URL';
+
+type EnvMap = Record<string, string | undefined>;
+
+function isBrowserRuntime(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof document !== 'undefined'
+  );
+}
 
 export class KeldraClient {
   private readonly http: HttpClient;
@@ -36,6 +49,11 @@ export class KeldraClient {
     if (!config.apiKey) {
       throw KeldraError.config('apiKey is required');
     }
+    if (isBrowserRuntime() && config.apiKey.startsWith('kk_')) {
+      throw KeldraError.config(
+        'Do not use a Keldra API key in browser code. Move SDK calls to your backend.',
+      );
+    }
     this.http = new HttpClient(config.apiKey);
     this.gatewayUrl = (config.gatewayUrl ?? DEFAULT_GATEWAY_URL).replace(
       /\/$/,
@@ -49,17 +67,41 @@ export class KeldraClient {
     this.encryptFn = config.encryptFn;
   }
 
-  /** Create a client with just an API key (uses defaults). */
   static create(apiKey: string): KeldraClient {
     return new KeldraClient({ apiKey });
   }
 
-  /** Create a builder for advanced configuration. */
+  static fromEnv(
+    env: EnvMap = ((globalThis as { process?: { env?: EnvMap } }).process?.env ??
+      {}) as EnvMap,
+    options?: {
+      apiKeyEnv?: string;
+      gatewayUrlEnv?: string;
+    },
+  ): KeldraClient {
+    if (isBrowserRuntime()) {
+      throw KeldraError.config(
+        'KeldraClient.fromEnv() is server-only. Load KELDRA_API_KEY on your backend.',
+      );
+    }
+    const apiKeyName = options?.apiKeyEnv ?? DEFAULT_API_KEY_ENV;
+    const gatewayUrlName = options?.gatewayUrlEnv ?? DEFAULT_GATEWAY_ENV;
+    const apiKey = env[apiKeyName];
+
+    if (!apiKey) {
+      throw KeldraError.config(`${apiKeyName} is required`);
+    }
+
+    return new KeldraClient({
+      apiKey,
+      gatewayUrl: env[gatewayUrlName] ?? DEFAULT_GATEWAY_URL,
+    });
+  }
+
   static builder(): KeldraClientBuilder {
     return new KeldraClientBuilder();
   }
 
-  /** Submit a transaction and wait for confirmation. */
   async relay(chain: Chain, signedTx: string): Promise<RelayResult> {
     const start = Date.now();
     const response = await this.submit(chain, signedTx);
@@ -73,7 +115,6 @@ export class KeldraClient {
     };
   }
 
-  /** Submit a transaction without waiting. Returns relay_id for polling. */
   async submit(chain: Chain, signedTx: string): Promise<RelayResponse> {
     const rawBytes = parseHex(signedTx);
     const padded = padTransaction(rawBytes);
@@ -103,14 +144,12 @@ export class KeldraClient {
     );
   }
 
-  /** Check relay status once. */
   async status(relayId: string): Promise<RelayStatusResponse> {
     return this.http.get<RelayStatusResponse>(
       `${this.gatewayUrl}/v1/relay/${relayId}/status`,
     );
   }
 
-  /** Poll until confirmed or failed, with exponential backoff. */
   async waitForConfirmation(relayId: string): Promise<RelayStatusResponse> {
     const deadline = Date.now() + this.confirmationTimeoutMs;
     let interval = this.pollIntervalMs;
@@ -124,9 +163,7 @@ export class KeldraClient {
         if (TERMINAL_STATUSES.has(lastStatus.status)) {
           return lastStatus;
         }
-      } catch {
-        // Swallow poll errors and retry (matches Rust behavior)
-      }
+      } catch {}
 
       interval = Math.min(interval * 2, MAX_POLL_INTERVAL_MS);
     }
@@ -134,17 +171,25 @@ export class KeldraClient {
     throw KeldraError.timeout(relayId, lastStatus?.status ?? 'queued');
   }
 
-  /** GET /v1/health */
   async health(): Promise<HealthResponse> {
     return this.http.get<HealthResponse>(`${this.gatewayUrl}/v1/health`);
   }
 
-  /** GET /v1/chains */
   async chains(): Promise<ChainsResponse> {
     return this.http.get<ChainsResponse>(`${this.gatewayUrl}/v1/chains`);
   }
 
-  /** Fetch the gateway's Noise public key and enable encryption. */
+  async limits(): Promise<MeLimitsResponse> {
+    return this.http.get<MeLimitsResponse>(`${this.gatewayUrl}/v1/me/limits`);
+  }
+
+  async usage(from: string, to: string): Promise<MeUsageResponse> {
+    const params = new URLSearchParams({ from, to });
+    return this.http.get<MeUsageResponse>(
+      `${this.gatewayUrl}/v1/me/usage?${params.toString()}`,
+    );
+  }
+
   async fetchNoiseKey(): Promise<void> {
     const resp = await this.http.get<NoiseKeyResponse>(
       `${this.gatewayUrl}/v1/noise-key`,
@@ -153,7 +198,6 @@ export class KeldraClient {
     this.noiseKid = resp.kid;
   }
 
-  /** Whether encryption is currently enabled. */
   get encrypted(): boolean {
     return !!(this.noisePublicKey && this.noiseKid && this.encryptFn);
   }

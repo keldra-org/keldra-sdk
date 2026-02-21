@@ -151,6 +151,79 @@ describe('KeldraClient.chains', () => {
   });
 });
 
+describe('KeldraClient.limits', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('parses /v1/me/limits response', async () => {
+    mockFetch([
+      {
+        body: {
+          api_key: 'kk_test',
+          key_id: 'k_123',
+          tier: 'pro',
+          limits: {
+            requests_per_minute: 120,
+            max_inflight: 200,
+            monthly_quota_relays: 2_000_000,
+            min_poll_interval_ms: 500,
+            max_body_bytes: 16384,
+          },
+          usage: {
+            month: '2026-02',
+            monthly_relays_submitted: 1234,
+            monthly_remaining_relays: 1_998_766,
+            inflight_relays: 0,
+          },
+        },
+      },
+    ]);
+
+    const client = KeldraClient.create('kk_test');
+    const resp = await client.limits();
+    expect(resp.tier).toBe('pro');
+    expect(resp.limits.requests_per_minute).toBe(120);
+    expect(resp.usage.monthly_relays_submitted).toBe(1234);
+  });
+});
+
+describe('KeldraClient.usage', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('parses /v1/me/usage response', async () => {
+    const mock = mockFetch([
+      {
+        body: {
+          daily: [
+            {
+              day: '2026-02-20',
+              api_key: 'kk_test',
+              tier: 'pro',
+              relays_submitted: 40,
+              relays_confirmed: 39,
+              relays_failed: 1,
+              bytes_ingested: 10000,
+            },
+          ],
+          totals: {
+            relays_submitted: 40,
+            relays_confirmed: 39,
+            relays_failed: 1,
+            bytes_ingested: 10000,
+          },
+        },
+      },
+    ]);
+
+    const client = KeldraClient.create('kk_test');
+    const resp = await client.usage('2026-02-01', '2026-02-20');
+    expect(resp.daily).toHaveLength(1);
+    expect(resp.totals.relays_submitted).toBe(40);
+    expect(mock.mock.calls[0][0]).toBe(
+      'http://localhost:3400/v1/me/usage?from=2026-02-01&to=2026-02-20',
+    );
+  });
+});
+
 describe('KeldraClient.waitForConfirmation', () => {
   afterEach(() => vi.restoreAllMocks());
 

@@ -36,9 +36,7 @@ export function extractErrorMessage(body: string): string {
   try {
     const parsed = JSON.parse(body);
     if (typeof parsed?.error === 'string') return parsed.error;
-  } catch {
-    // not JSON
-  }
+  } catch {}
   return body;
 }
 
