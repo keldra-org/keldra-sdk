@@ -117,10 +117,10 @@ export class KeldraClient {
 
   async submit(chain: Chain, signedTx: string): Promise<RelayResponse> {
     const rawBytes = parseHex(signedTx);
-    const padded = padTransaction(rawBytes);
 
     let request: RelayRequest;
     if (this.noisePublicKey && this.noiseKid && this.encryptFn) {
+      const padded = padTransaction(rawBytes);
       const encrypted = await this.encryptFn(padded, this.noisePublicKey);
       const b64 = toBase64(encrypted);
       request = {
@@ -133,7 +133,8 @@ export class KeldraClient {
     } else {
       request = {
         chain,
-        signed_tx: `0x${toHex(padded)}`,
+        // Plain submit must keep the original signed tx bytes.
+        signed_tx: signedTx.startsWith('0x') ? signedTx : `0x${toHex(rawBytes)}`,
         options: { delay_profile: this.defaultDelayProfile },
       };
     }
