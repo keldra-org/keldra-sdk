@@ -31,8 +31,15 @@ npm install @keldra/sdk viem
 
 ```ts
 import { KeldraClient } from "@keldra/sdk";
+import { createEncryptFn } from "@keldra/sdk/crypto";
 
-const client = KeldraClient.fromEnv();
+const client = KeldraClient.builder()
+  .apiKey(process.env.KELDRA_API_KEY!)
+  .gatewayUrl(process.env.KELDRA_GATEWAY_URL ?? "https://keldra.network")
+  .withEncryption(createEncryptFn())
+  .build();
+
+await client.fetchNoiseKey();
 const result = await client.relay("ethereum", signedTxHex);
 const limits = await client.limits();
 const usage = await client.usage("2026-02-01", "2026-02-20");
@@ -66,8 +73,13 @@ Keep Keldra calls on your server route:
 // app/api/relay/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { KeldraClient } from "@keldra/sdk";
+import { createEncryptFn } from "@keldra/sdk/crypto";
 
-const client = KeldraClient.fromEnv();
+const client = KeldraClient.builder()
+  .apiKey(process.env.KELDRA_API_KEY!)
+  .gatewayUrl(process.env.KELDRA_GATEWAY_URL ?? "https://keldra.network")
+  .withEncryption(createEncryptFn())
+  .build();
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -77,6 +89,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "chain and signedTx are required" }, { status: 400 });
   }
 
+  await client.fetchNoiseKey();
   const relay = await client.relay(chain, signedTx);
   return NextResponse.json(relay);
 }
@@ -92,6 +105,7 @@ import { createEncryptFn } from "@keldra/sdk/crypto";
 
 const client = KeldraClient.builder()
   .apiKey("kk_your_api_key")
+  .gatewayUrl("https://keldra.network")
   .withEncryption(createEncryptFn())
   .build();
 

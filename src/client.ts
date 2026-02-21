@@ -17,7 +17,7 @@ import type {
   RelayStatusResponse,
 } from './types.js';
 import { TERMINAL_STATUSES } from './types.js';
-import { parseHex, sleep, toBase64, toHex } from './utils.js';
+import { parseHex, sleep, toBase64 } from './utils.js';
 
 const DEFAULT_GATEWAY_URL = 'http://localhost:3400';
 const DEFAULT_TIMEOUT_MS = 300_000;
@@ -117,27 +117,22 @@ export class KeldraClient {
 
   async submit(chain: Chain, signedTx: string): Promise<RelayResponse> {
     const rawBytes = parseHex(signedTx);
-
-    let request: RelayRequest;
-    if (this.noisePublicKey && this.noiseKid && this.encryptFn) {
-      const padded = padTransaction(rawBytes);
-      const encrypted = await this.encryptFn(padded, this.noisePublicKey);
-      const b64 = toBase64(encrypted);
-      request = {
-        chain,
-        signed_tx: '',
-        options: { delay_profile: this.defaultDelayProfile },
-        encrypted_payload: b64,
-        noise_kid: this.noiseKid,
-      };
-    } else {
-      request = {
-        chain,
-        // Plain submit must keep the original signed tx bytes.
-        signed_tx: signedTx.startsWith('0x') ? signedTx : `0x${toHex(rawBytes)}`,
-        options: { delay_profile: this.defaultDelayProfile },
-      };
+    if (!(this.noisePublicKey && this.noiseKid && this.encryptFn)) {
+      throw KeldraError.config(
+        'Encryption is required. Configure .withEncryption(createEncryptFn()) and call fetchNoiseKey() before submit().',
+      );
     }
+
+    const padded = padTransaction(rawBytes);
+    const encrypted = await this.encryptFn(padded, this.noisePublicKey);
+    const b64 = toBase64(encrypted);
+    const request: RelayRequest = {
+      chain,
+      signed_tx: '',
+      options: { delay_profile: this.defaultDelayProfile },
+      encrypted_payload: b64,
+      noise_kid: this.noiseKid,
+    };
 
     return this.http.post<RelayResponse>(
       `${this.gatewayUrl}/v1/relay`,
