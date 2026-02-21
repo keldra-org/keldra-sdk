@@ -1,16 +1,16 @@
 {
   "name": "@keldra/sdk",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "TypeScript SDK for Keldra relay API",
   "license": "MIT",
   "author": "Keldra",
-  "homepage": "https://github.com/jperth86/keldra-sdk#readme",
+  "homepage": "https://github.com/keldra-org/keldra-sdk#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jperth86/keldra-sdk.git"
+    "url": "git+https://github.com/keldra-org/keldra-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/jperth86/keldra-sdk/issues"
+    "url": "https://github.com/keldra-org/keldra-sdk/issues"
   },
   "keywords": [
     "keldra",
